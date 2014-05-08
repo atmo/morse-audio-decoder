@@ -11,22 +11,27 @@ import android.view.View;
 public class SpectrumView extends View {
     int width;
     int height;
-    int[] colormap = {Color.BLUE, Color.GREEN, Color.RED};
+    int[] colormap = {Color.BLUE, Color.RED};
     Paint paint;
 
+    @SuppressWarnings("deprecation")
     public SpectrumView(Context context) {
         super(context);
         Display display = ((MainActivity)context).getWindowManager().getDefaultDisplay();
         width = display.getWidth();
         height = (int)(display.getHeight()*0.6);
         paint = new Paint();
+
+        DrawingTask drawingTask = new DrawingTask(this);
+        drawingTask.setRunning(true);
+        drawingTask.execute();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        int max = 600;
-        int nrect = 100, h = 10, step = max/nrect;
+        int max = 100;
+        int nrect = 100, h = 5, step = max/nrect;
         for (int i = 0; i<nrect; ++i) {
             int color = getColor(i*step, max+1);
             paint.setARGB(255, Color.red(color), Color.green(color), Color.blue(color));
