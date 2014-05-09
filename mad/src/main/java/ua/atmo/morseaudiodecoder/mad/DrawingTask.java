@@ -10,15 +10,34 @@ import android.util.Log;
 class DrawingTask extends AsyncTask<Void, short[], Void>{
     private static final String TAG = "DRAWING_THREAD";
 
-    private SpectrumView view;
     private AudioRecord recorder;
     private int bufferSize, sampleRate;
+    private final int BUFFERS_COUNT = 256;
+    private short[][] audioBuffers;
+    private int audioBufferIdx;
+
+    private SpectrumView view;
+    private int windowDisplayWidth;
+    private double[] window;
+
     private boolean isRunning = false;
 
     public DrawingTask(SpectrumView view) {
         recorder = findAudioRecord();
+        audioBufferIdx = 0;
         this.view = view;
 
+        audioBuffers = new short[BUFFERS_COUNT][bufferSize];
+
+        final int MINIMAL_WINDOW_LENGTH = 500;
+        int windowLength = 0;
+        while (windowLength<MINIMAL_WINDOW_LENGTH)
+            windowLength += bufferSize;
+        window = new double[windowLength];
+
+        final int DISPLAY_INTERVAL = 3;
+        int samplesCount = DISPLAY_INTERVAL*sampleRate;
+        windowDisplayWidth = (window.length*windowDisplayWidth + samplesCount - 1)/samplesCount;
     }
 
     public AudioRecord findAudioRecord() {
@@ -66,8 +85,25 @@ class DrawingTask extends AsyncTask<Void, short[], Void>{
         isRunning = run;
     }
 
+    public int getWindowDisplayWidth() {
+        return windowDisplayWidth;
+    }
     @Override
     protected Void doInBackground(Void... voids) {
+        short[] buffer;
+        try {
+            recorder.startRecording();
+        } catch (IllegalStateException e) {
+            Log.e(TAG, "Error starting recording:" + e);
+            throw e;
+        }
+
+        while (isRunning) {
+            buffer = audioBuffers[audioBufferIdx];
+            audioBufferIdx = (audioBufferIdx == BUFFERS_COUNT-1 ? 0 : audioBufferIdx +1);
+            recorder.read(buffer, 0, buffer.length);
+            publishProgress(buffer);
+        }
         return null;
     }
 

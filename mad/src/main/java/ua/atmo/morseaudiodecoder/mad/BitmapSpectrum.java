@@ -11,15 +11,15 @@ public class BitmapSpectrum {
     private int width, height;
     private int drawPosition;
     private final int MAX = 1000000;
-    private int windowWidth;
+    private int windowDisplayWidth;
     private Paint paint;
     private Canvas canvas;
 
-    public BitmapSpectrum(int width, int height, int windowWidth) {
+    public BitmapSpectrum(int width, int height, int windowDisplayWidth) {
         drawPosition = 0;
         this.width = width;
         this.height = height;
-        this.windowWidth = windowWidth;
+        this.windowDisplayWidth = windowDisplayWidth;
         bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         canvas = new Canvas(bitmap);
     }
@@ -29,9 +29,9 @@ public class BitmapSpectrum {
         for (int i = 0; i<freqCount; ++i) {
             int color = getColor(window[i]);
             paint.setARGB(255, Color.red(color), Color.green(color), Color.blue(color));
-            canvas.drawRect(drawPosition, i, drawPosition + windowWidth, i+1, paint);
+            canvas.drawRect(drawPosition, i, drawPosition + windowDisplayWidth, i+1, paint);
         }
-        drawPosition += windowWidth;
+        drawPosition += windowDisplayWidth;
         if (drawPosition >= width) {
             drawPosition = 0;
         }

@@ -9,7 +9,6 @@ import android.view.View;
 
 public class SpectrumView extends View {
     private BitmapSpectrum spectrum;
-    private final int WINDOW_WIDTH = 20;
     private int width, height;
 
     Rect src = new Rect(), dst = new Rect();
@@ -20,11 +19,13 @@ public class SpectrumView extends View {
         Display display = ((MainActivity)context).getWindowManager().getDefaultDisplay();
         width = display.getWidth();
         height = display.getHeight();
-        spectrum = new BitmapSpectrum(width, height, WINDOW_WIDTH);
 
         DrawingTask drawingTask = new DrawingTask(this);
         drawingTask.setRunning(true);
         drawingTask.execute();
+
+        int windowDisplayWidth = drawingTask.getWindowDisplayWidth();
+        spectrum = new BitmapSpectrum(width, height, windowDisplayWidth);
     }
 
     @Override
