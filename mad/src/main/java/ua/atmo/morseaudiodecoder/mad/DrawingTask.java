@@ -11,7 +11,7 @@ class DrawingTask extends AsyncTask<Void, short[], Void>{
     private static final String TAG = "DRAWING_THREAD";
 
     private SpectrumView view;
-    AudioRecord recorder;
+    private AudioRecord recorder;
     private int bufferSize, sampleRate;
     private boolean isRunning = false;
 
