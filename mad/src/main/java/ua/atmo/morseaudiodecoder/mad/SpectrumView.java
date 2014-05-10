@@ -8,6 +8,7 @@ import android.view.Display;
 import android.view.View;
 
 public class SpectrumView extends View {
+    private final String TAG = "SpectrumView";
     private BitmapSpectrum spectrum;
     private int width, height;
 
@@ -16,6 +17,7 @@ public class SpectrumView extends View {
     @SuppressWarnings("deprecation")
     public SpectrumView(Context context) {
         super(context);
+        setWillNotDraw(false);
         Display display = ((MainActivity)context).getWindowManager().getDefaultDisplay();
         width = display.getWidth();
         height = display.getHeight();
@@ -45,6 +47,5 @@ public class SpectrumView extends View {
     public void drawWindow(int[] window) {
         spectrum.drawWindow(window);
         this.invalidate();
-
     }
 }

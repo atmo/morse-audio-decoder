@@ -8,27 +8,34 @@ import android.graphics.Paint;
 public class BitmapSpectrum {
     private Bitmap bitmap;
     private int[] colormap = {Color.BLUE, Color.RED};
+    private final int MAX = 100000000, STEP = 100;
+    private int[] colorValues = new int[MAX / STEP];
     private int width, height;
     private int drawPosition;
-    private final int MAX = 1000000;
     private int windowDisplayWidth;
-    private Paint paint;
     private Canvas canvas;
+    private Paint paint;
 
     public BitmapSpectrum(int width, int height, int windowDisplayWidth) {
         drawPosition = 0;
         this.width = width;
         this.height = height;
         this.windowDisplayWidth = windowDisplayWidth;
-        bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
         canvas = new Canvas(bitmap);
+        paint = new Paint();
+
+        for (int v = 0; v < MAX; v += STEP) {
+            colorValues[v / STEP] = getColor(v);
+        }
     }
 
     public void drawWindow(int[] window) {
         int freqCount = Math.min(window.length, height);
         for (int i = 0; i<freqCount; ++i) {
-            int color = getColor(window[i]);
-            paint.setARGB(255, Color.red(color), Color.green(color), Color.blue(color));
+            if (window[i] >= MAX)
+                window[i] = MAX - 1;
+            paint.setColor(colorValues[window[i] / STEP]);
             canvas.drawRect(drawPosition, i, drawPosition + windowDisplayWidth, i+1, paint);
         }
         drawPosition += windowDisplayWidth;
@@ -47,8 +54,6 @@ public class BitmapSpectrum {
 
     private int getColor(int value) {
         int step = MAX/(colormap.length-1);
-        if (value>=MAX)
-            value = MAX-1;
         int idx = value/step;
         value -= step*idx;
         int red = interpolate(Color.red(colormap[idx]), Color.red(colormap[idx+1]), value, step)/step,

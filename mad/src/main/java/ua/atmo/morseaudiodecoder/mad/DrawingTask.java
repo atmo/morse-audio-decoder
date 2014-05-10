@@ -7,37 +7,50 @@ import android.media.MediaRecorder;
 import android.os.AsyncTask;
 import android.util.Log;
 
-class DrawingTask extends AsyncTask<Void, short[], Void>{
-    private static final String TAG = "DRAWING_THREAD";
+import edu.emory.mathcs.jtransforms.dct.DoubleDCT_1D;
+
+class DrawingTask extends AsyncTask<Void, double[], Void> {
+    private static final String TAG = "DRAWING_TASK";
 
     private AudioRecord recorder;
-    private int bufferSize, sampleRate;
-    private final int BUFFERS_COUNT = 256;
+    private int audioBufferSize, sampleRate;
     private short[][] audioBuffers;
     private int audioBufferIdx;
 
     private SpectrumView view;
     private int windowDisplayWidth;
-    private double[] window;
+
+    private double[][] windowBuffers;
+    private int windowBufferIdx;
+    private int[] energy;
+    private DoubleDCT_1D transform;
 
     private boolean isRunning = false;
+    private int windowAudioBufferPos;
 
     public DrawingTask(SpectrumView view) {
         recorder = findAudioRecord();
         audioBufferIdx = 0;
+        windowBufferIdx = 0;
         this.view = view;
 
-        audioBuffers = new short[BUFFERS_COUNT][bufferSize];
+        final int AUDIO_BUFFERS_COUNT = 256;
+        audioBuffers = new short[AUDIO_BUFFERS_COUNT][audioBufferSize];
 
-        final int MINIMAL_WINDOW_LENGTH = 500;
+        final int MINIMAL_WINDOW_LENGTH = 5000;
         int windowLength = 0;
         while (windowLength<MINIMAL_WINDOW_LENGTH)
-            windowLength += bufferSize;
-        window = new double[windowLength];
+            windowLength += audioBufferSize;
+
+        final int WINDOW_BUFFERS_COUNT = 256;
+        windowBuffers = new double[WINDOW_BUFFERS_COUNT][windowLength];
+        energy = new int[windowLength];
 
         final int DISPLAY_INTERVAL = 3;
         int samplesCount = DISPLAY_INTERVAL*sampleRate;
-        windowDisplayWidth = (window.length*windowDisplayWidth + samplesCount - 1)/samplesCount;
+        windowDisplayWidth = (windowLength * windowDisplayWidth + samplesCount / 2) / samplesCount;
+
+        transform = new DoubleDCT_1D(windowLength);
     }
 
     public AudioRecord findAudioRecord() {
@@ -63,9 +76,9 @@ class DrawingTask extends AsyncTask<Void, short[], Void>{
                             if (recorder.getState() == AudioRecord.STATE_INITIALIZED) {
                                 Log.d(TAG, "Success with buffer size: " + BUFFER_SIZE_BYTES);
                                 if (encoding == AudioFormat.ENCODING_PCM_16BIT)
-                                    bufferSize = BUFFER_SIZE_BYTES / Short.SIZE;
+                                    audioBufferSize = BUFFER_SIZE_BYTES / Short.SIZE;
                                 else
-                                    bufferSize = BUFFER_SIZE_BYTES / Byte.SIZE;
+                                    audioBufferSize = BUFFER_SIZE_BYTES / Byte.SIZE;
                                 sampleRate = rate;
                                 return recorder;
                             }
@@ -88,9 +101,9 @@ class DrawingTask extends AsyncTask<Void, short[], Void>{
     public int getWindowDisplayWidth() {
         return windowDisplayWidth;
     }
+
     @Override
     protected Void doInBackground(Void... voids) {
-        short[] buffer;
         try {
             recorder.startRecording();
         } catch (IllegalStateException e) {
@@ -98,17 +111,33 @@ class DrawingTask extends AsyncTask<Void, short[], Void>{
             throw e;
         }
 
+        short[] buffer;
+        double[] window;
         while (isRunning) {
             buffer = audioBuffers[audioBufferIdx];
-            audioBufferIdx = (audioBufferIdx == BUFFERS_COUNT-1 ? 0 : audioBufferIdx +1);
+            audioBufferIdx = (audioBufferIdx == audioBuffers.length - 1 ? 0 : audioBufferIdx + 1);
             recorder.read(buffer, 0, buffer.length);
-            publishProgress(buffer);
+
+            window = windowBuffers[windowBufferIdx];
+            for (int i = windowAudioBufferPos, j = 0; j < buffer.length; ++i, ++j) {
+                window[i] = buffer[j];
+            }
+            windowAudioBufferPos += buffer.length;
+            if (windowAudioBufferPos == window.length) {
+                transform.forward(window, false);
+                publishProgress(window);
+                windowAudioBufferPos = 0;
+                windowBufferIdx = (windowBufferIdx == windowBuffers.length - 1 ? 0 : windowBufferIdx + 1);
+            }
         }
         return null;
     }
 
     @Override
-    protected void onProgressUpdate(short[]... values) {
-
+    protected void onProgressUpdate(double[]... values) {
+        double[] freq = values[0];
+        for (int i = 0; i < freq.length; ++i)
+            energy[i] = (int) (freq[i] > 0 ? freq[i] : -freq[i]);
+        view.drawWindow(energy);
     }
 }
